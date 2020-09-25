@@ -5,8 +5,8 @@
     
 ## 原理
 
-    ss 快的秘诀在于，它利用到了协议栈中 tcp_diag/udp_tcp_diag模块。tcp_diag/udp_tcp_diag 是一个用于分析统计的模块，
-    可以获得 Linux 内核中第一手的信息，这就确保了获取网络连接的快捷高效.
+    ss 快的秘诀在于，它利用到了tcp_diag/udp_diag内核模块。tcp_diag/udp_tcp_diag 是一个用于分析统计的模块，
+    可以通过netlink获得Linux 内核中第一手的网络通讯信息，这就确保了获取网络连接的快捷高效.
     
 ### 注意
     目前仅支持linux环境运行
