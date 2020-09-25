@@ -1,0 +1,6 @@
+.idea/
+*.a
+.DS_Store
+*.log
+*.log.*
+vendor
