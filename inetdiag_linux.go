@@ -3,12 +3,13 @@ package goss
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/pkg/errors"
 	"io"
 	"net"
 	"os"
 	"syscall"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 // Enums / Constants
@@ -75,6 +76,49 @@ const (
 	AF_INET6               = 10
 )
 
+// Request messages.
+
+var sizeofInetDiagReq = int(unsafe.Sizeof(InetDiagReq{}))
+
+// InetDiagReq (inet_diag_req) is used to request diagnostic data from older
+// kernels.
+// https://github.com/torvalds/linux/blob/v4.0/include/uapi/linux/inet_diag.h#L25
+type InetDiagReq struct {
+	Family uint8
+	SrcLen uint8
+	DstLen uint8
+	Ext    uint8
+	ID     InetDiagSockID
+	States uint32 // States to dump.
+	DBs    uint32 // Tables to dump.
+}
+
+func (r InetDiagReq) toWireFormat() []byte {
+	buf := bytes.NewBuffer(make([]byte, sizeofInetDiagReq))
+	buf.Reset()
+	if err := binary.Write(buf, byteOrder, r); err != nil {
+		// This never returns an error.
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// NewInetDiagReq returns a new NetlinkMessage whose payload is an InetDiagReq.
+// Callers should set their own sequence number in the returned message header.
+func NewInetDiagReq() syscall.NetlinkMessage {
+	hdr := syscall.NlMsghdr{
+		Type:  uint16(TCPDIAG_GETSOCK),
+		Flags: uint16(syscall.NLM_F_DUMP | syscall.NLM_F_REQUEST),
+		Pid:   uint32(0),
+	}
+	req := InetDiagReq{
+		Family: uint8(AF_INET), // This returns both ipv4 and ipv6.
+		States: AllTCPStates,
+	}
+
+	return syscall.NetlinkMessage{Header: hdr, Data: req.toWireFormat()}
+}
+
 // V2 Request
 
 var sizeofInetDiagReqV2 = int(unsafe.Sizeof(InetDiagReqV2{}))
@@ -100,7 +144,6 @@ type InetDiagSockID struct {
 	If     uint32
 	Cookie [2]uint32
 }
-
 
 var (
 	byteOrder = GetEndian()
@@ -148,7 +191,6 @@ func ParseInetDiagMsg(b []byte) (*InetDiagMsg, error) {
 	return inetDiagMsg, nil
 }
 
-
 // SrcPort returns the source (local) port.
 func (m InetDiagMsg) SrcPort() int { return int(binary.BigEndian.Uint16(m.ID.SPort[:])) }
 
@@ -178,7 +220,6 @@ func ipBytes(data [16]byte, af AddressFamily) []byte {
 
 	return data[:]
 }
-
 
 // NetlinkInetDiagWithBuf sends the given netlink request parses the responses
 // with the assumption that they are inet_diag_msgs. readBuf will be used to
@@ -251,6 +292,7 @@ done:
 // NetlinkErrno represent the error code contained in a netlink message of
 // type NLMSG_ERROR.
 type NetlinkErrno uint32
+
 // Netlink error codes.
 const (
 	NLE_SUCCESS NetlinkErrno = iota
@@ -289,6 +331,7 @@ const (
 	NLE_DUMP_INTR
 	NLE_ATTRSIZE
 )
+
 // https://github.com/thom311/libnl/blob/libnl3_2_28/lib/error.c
 var netlinkErrorMsgs = map[NetlinkErrno]string{
 	NLE_SUCCESS:           "Success",
@@ -327,6 +370,7 @@ var netlinkErrorMsgs = map[NetlinkErrno]string{
 	NLE_DUMP_INTR:         "Dump inconsistency detected, interrupted",
 	NLE_ATTRSIZE:          "Attribute max length exceeded",
 }
+
 func (e NetlinkErrno) Error() string {
 	if msg, found := netlinkErrorMsgs[e]; found {
 		return msg
@@ -334,7 +378,6 @@ func (e NetlinkErrno) Error() string {
 
 	return netlinkErrorMsgs[NLE_FAILURE]
 }
-
 
 // Netlink Error Code Handling
 
@@ -360,4 +403,3 @@ func serialize(msg syscall.NetlinkMessage) []byte {
 	copy(b[16:], msg.Data)
 	return b
 }
-
