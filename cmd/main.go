@@ -21,12 +21,12 @@ func main() {
 		fmt.Println(string(s))
 	}
 
-	// connectionsV6, err := goss.Connections(goss.AF_INET6, "all")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// for _, conn := range connectionsV6 {
-	// 	s, _ := json.Marshal(conn)
-	// 	fmt.Println(string(s))
-	// }
+	connectionsV6, err := goss.Connections(goss.AF_INET6, "all")
+	if err != nil {
+		panic(err)
+	}
+	for _, conn := range connectionsV6 {
+		s, _ := json.Marshal(conn)
+		fmt.Println(string(s))
+	}
 }
