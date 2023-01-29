@@ -223,7 +223,7 @@ func parseSocketInode(lnk string) (uint32, error) {
 		return 0, err
 	}
 	if n != 1 {
-		return 0, fmt.Errorf("'%s' should be pattern '[socket:\\%d]'", lnk)
+		return 0, fmt.Errorf("'%s' should be pattern '[socket:\\%d]'", lnk, n)
 	}
 	return ino, nil
 }

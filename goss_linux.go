@@ -2,6 +2,8 @@
 // Authors: Dean <dean@csoio.com>
 // Date: 2020/9/25 10:25 上午
 
+//go:build linux
+
 package goss
 
 import (
@@ -12,7 +14,7 @@ import (
 	"unsafe"
 )
 
-func Connections(kind string) ([]*Stat, error) {
+func Connections(family AddressFamily, kind string) ([]*Stat, error) {
 	var connectionsStat []*Stat
 	userEntries, err := BuildUserEntries()
 	if err != nil {
@@ -20,7 +22,7 @@ func Connections(kind string) ([]*Stat, error) {
 	}
 	protocols := netConnectionKindMap[kind]
 	for _, protocol := range protocols {
-		conn, err := ConnectionsWithProtocol(protocol)
+		conn, err := ConnectionsWithProtocol(family, protocol)
 		if err != nil {
 			return nil, err
 		}
@@ -50,14 +52,14 @@ func Connections(kind string) ([]*Stat, error) {
 	return connectionsStat, nil
 }
 
-func ConnectionsWithProtocol(protocol uint8) ([]*InetDiagMsg, error) {
+func ConnectionsWithProtocol(family AddressFamily, protocol uint8) ([]*InetDiagMsg, error) {
 	hdr := syscall.NlMsghdr{
 		Type:  uint16(SOCK_DIAG_BY_FAMILY),
 		Flags: uint16(syscall.NLM_F_DUMP | syscall.NLM_F_REQUEST),
 		Pid:   uint32(0),
 	}
 	req := InetDiagReqV2{
-		Family:   uint8(AF_INET),
+		Family:   uint8(family),
 		Protocol: protocol,
 		States:   AllTCPStates,
 	}
